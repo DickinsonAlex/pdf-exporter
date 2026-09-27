@@ -1,0 +1,16 @@
+{
+  "name": "pdf-exporter",
+  "version": "0.1.0",
+  "main": "main.js",
+  "scripts": {
+    "build": "esbuild main.ts --bundle --outfile=main.js --format=cjs --platform=browser --external:obsidian"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "obsidian": "latest"
+  }
+}

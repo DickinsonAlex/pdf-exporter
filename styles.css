@@ -1,0 +1,117 @@
+/* Intentionally empty.
+   PDF-specific styles are injected into the export document only so the plugin
+   does not modify the appearance of Obsidian itself. */
+
+.resume-preview-modal {
+   width: min(96vw, 1100px);
+   max-height: 94vh;
+   padding: 0;
+}
+
+.resume-preview-modal .modal-content {
+   display: flex;
+   flex-direction: column;
+   height: 100%;
+   min-height: 0;
+}
+
+.resume-preview-modal .modal-title {
+   margin-bottom: 0.5rem;
+}
+
+.resume-preview-toolbar {
+   display: flex;
+   justify-content: flex-end;
+   gap: 0.5rem;
+   padding: 0 0 0.75rem 0;
+}
+
+.resume-preview-toolbar button {
+   padding: 0.45rem 0.85rem;
+   border: 1px solid var(--background-modifier-border);
+   border-radius: 6px;
+   background: var(--background-secondary);
+   color: var(--text-normal);
+   cursor: pointer;
+}
+
+.resume-preview-toolbar button:hover {
+   background: var(--background-modifier-hover);
+}
+
+.resume-preview-frame-wrap {
+   flex: 0 0 auto;
+   min-width: 300px;
+   min-height: 300px;
+   width: min(100%, calc((94vh - 110px) * 210 / 297));
+   aspect-ratio: 210 / 297;
+   margin: 0 auto;
+   border: 1px solid var(--background-modifier-border);
+   border-radius: 10px;
+   overflow: hidden;
+   background: var(--background-primary);
+}
+
+.resume-preview-frame-wrap iframe {
+   width: 100%;
+   height: 100%;
+   border: 0;
+   background: white;
+}
+
+.resume-header-block {
+   margin-bottom: 0.65rem;
+   text-align: center;
+}
+
+.resume-header-subtitle {
+   width: 100%;
+   margin: 0 0 0.45rem 0;
+   padding-bottom: 0.25rem;
+   font-size: 11pt;
+   font-weight: 700;
+   text-transform: uppercase;
+   letter-spacing: 0.08em;
+   color: var(--heading);
+   border-bottom: 1px solid var(--border);
+}
+
+.resume-header-row {
+   display: flex;
+   flex-wrap: wrap;
+   justify-content: center;
+   align-items: center;
+   column-gap: 0.2rem;
+   row-gap: 0.2rem;
+   font-size: 8.75pt;
+   line-height: 1.2;
+   color: var(--text-normal);
+   text-align: center;
+}
+
+.resume-header-item {
+   display: inline-flex;
+   align-items: baseline;
+   white-space: nowrap;
+   text-align: center;
+}
+
+.resume-header-separator {
+   margin: 0 0.55rem;
+   color: var(--text-faint);
+   flex: 0 0 auto;
+}
+
+.resume-header-label {
+   font-weight: 600;
+   color: var(--text-muted);
+}
+
+.resume-header-item a {
+   color: var(--text-normal);
+   text-decoration: none;
+}
+
+.resume-header-item a:hover {
+   text-decoration: underline;
+}

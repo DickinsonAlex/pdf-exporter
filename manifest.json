@@ -1,0 +1,10 @@
+{
+  "id": "pdf-exporter",
+  "name": "PDF Exporter",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "Export the active note as a print-ready PDF.",
+  "author": "Alex Dickinson",
+  "authorUrl": "https://github.com/dickinsonalex",
+  "isDesktopOnly": true
+}
