@@ -16,7 +16,7 @@ An Obsidian plugin that exports the note you're viewing as a clean, print-ready 
 
 ## Installation
 
-1. Build the plugin (below), or use the built `main.js`.
+1. Download `main.js`, `manifest.json` and `styles.css` from the latest [release](../../releases), or build the plugin yourself (below).
 2. Copy `main.js`, `manifest.json` and `styles.css` into `<your vault>/.obsidian/plugins/pdf-exporter/`.
 3. Enable **PDF Exporter** under **Settings → Community plugins**.
 
@@ -38,3 +38,7 @@ Built with TypeScript, the Obsidian plugin API and esbuild.
 ## Credits
 
 Made by Alex Dickinson.
+
+## Licence
+
+[MIT](LICENSE)

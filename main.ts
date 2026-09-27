@@ -7,7 +7,7 @@ import {
 
 export default class PdfExportPlugin extends Plugin {
 	async onload() {
-		this.addRibbonIcon("file-down", "Export resume as PDF", async () => {
+		this.addRibbonIcon("file-down", "Export note as PDF", async () => {
 			await this.exportActiveNoteToPdf();
 		});
 
@@ -57,7 +57,7 @@ export default class PdfExportPlugin extends Plugin {
 			new Notice("Opened PDF preview.");
 		} catch (error) {
 			console.error("Resume PDF export failed:", error);
-			new Notice("Failed to export resume. Check console.");
+			new Notice("Failed to export PDF. Check the console.");
 		}
 	}
 

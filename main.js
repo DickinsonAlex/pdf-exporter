@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const obsidian_1 = require("obsidian");
 class PdfExportPlugin extends obsidian_1.Plugin {
     async onload() {
-        this.addRibbonIcon("file-down", "Export resume as PDF", async () => {
+        this.addRibbonIcon("file-down", "Export note as PDF", async () => {
             await this.exportActiveNoteToPdf();
         });
         this.addCommand({
@@ -38,7 +38,7 @@ class PdfExportPlugin extends obsidian_1.Plugin {
         }
         catch (error) {
             console.error("Resume PDF export failed:", error);
-            new obsidian_1.Notice("Failed to export resume. Check console.");
+            new obsidian_1.Notice("Failed to export PDF. Check the console.");
         }
     }
     buildPrintHtml(renderedHtml, title) {
