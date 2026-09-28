@@ -1,3 +1,6 @@
 node_modules/
 data.json
 *.log
+
+# Local build output (kept out of the repo)
+/[Bb]uilds/
