@@ -812,6 +812,10 @@ class ResumePreviewModal extends Modal {
 		this.modalEl.style.maxHeight = "94vh";
 
 		const toolbar = contentEl.createDiv({ cls: "resume-preview-toolbar" });
+		const saveButton = toolbar.createEl("button", { text: "Save PDF", cls: "mod-cta" });
+		saveButton.type = "button";
+		saveButton.addEventListener("click", () => this.savePdf());
+
 		const previewButton = toolbar.createEl("button", { text: "Print" });
 		previewButton.type = "button";
 		previewButton.addEventListener("click", () => this.printPreview());
@@ -864,20 +868,71 @@ class ResumePreviewModal extends Modal {
 		frameWrap.style.height = `${Math.floor(targetHeight)}px`;
 	}
 
+	/**
+	 * Renders the paginated preview straight to a PDF with Electron, so the save
+	 * dialog can default to the note's name (the print dialog can't be given one).
+	 */
+	private async savePdf(): Promise<void> {
+		const doc = this.previewFrame?.contentDocument;
+		const req = (window as any).require;
+		const remote = req?.("electron")?.remote;
+		if (!doc || !remote) {
+			new Notice(doc ? "Saving directly isn't available here, use Print instead." : "Preview is not ready yet.");
+			return;
+		}
+
+		const result = await remote.dialog.showSaveDialog({
+			title: "Save PDF",
+			defaultPath: `${this.fileName}.pdf`,
+			filters: [{ name: "PDF", extensions: ["pdf"] }]
+		});
+		if (result.canceled || !result.filePath) return;
+
+		// Inline images so the offscreen window doesn't need Obsidian's app:// URLs.
+		const clone = doc.documentElement.cloneNode(true) as HTMLElement;
+		await Promise.all(Array.from(clone.querySelectorAll("img")).map(async (img) => {
+			try {
+				const blob = await (await fetch(img.src)).blob();
+				img.src = await new Promise<string>((resolve, reject) => {
+					const reader = new FileReader();
+					reader.onload = () => resolve(reader.result as string);
+					reader.onerror = reject;
+					reader.readAsDataURL(blob);
+				});
+			} catch (e) { console.warn("PDF Exporter: couldn't inline image", img.src, e); }
+		}));
+
+		const fs = req("fs"), path = req("path"), os = req("os");
+		const tmp = path.join(os.tmpdir(), `pdf-exporter-${Date.now()}.html`);
+		fs.writeFileSync(tmp, "<!DOCTYPE html>" + clone.outerHTML);
+		const win = new remote.BrowserWindow({ show: false, webPreferences: { javascript: false } });
+		try {
+			await win.loadFile(tmp);
+			const data = await win.webContents.printToPDF({
+				pageSize: "A4",
+				printBackground: true,
+				preferCSSPageSize: true,
+				margins: { marginType: "none" }
+			});
+			fs.writeFileSync(result.filePath, data);
+			new Notice(`Saved ${path.basename(result.filePath)}`);
+			this.close();
+		} catch (e) {
+			console.error("PDF Exporter:", e);
+			new Notice("Saving the PDF failed, see the console (Ctrl+Shift+I).");
+		} finally {
+			win.destroy();
+			fs.unlink(tmp, () => {});
+		}
+	}
+
 	private printPreview(): void {
 		if (!this.previewFrame?.contentWindow) {
 			new Notice("Preview is not ready yet.");
 			return;
 		}
 
-		// The save dialog suggests the top window's title as the file name, so show the
-		// note's name there while printing, then put Obsidian's title back.
-		const previousTitle = document.title;
-		const restore = () => { document.title = previousTitle; };
-		document.title = this.fileName;
-		this.previewFrame.contentWindow.addEventListener("afterprint", restore, { once: true });
 		this.previewFrame.contentWindow.focus();
 		this.previewFrame.contentWindow.print();
-		window.setTimeout(restore, 1000);
 	}
 }

@@ -10,8 +10,9 @@ An Obsidian plugin that exports the note you're viewing as a clean, print-ready 
 
 - **Renders the note properly:** Markdown, embeds and transclusions are rendered the way Obsidian shows them, and the plugin waits for embeds to load before exporting
 - **Cleans up the output:** frontmatter and `%% comments %%` are stripped
-- **Print layout:** A4 pages with print styles, sensible heading and section breaks, and support for manual page breaks
-- **Preview first:** opens a print preview in a sandboxed window, so you can check the layout before saving
+- **Print layout:** A4 pages with print styles and sensible heading and section breaks. Put `<break>` on its own line to start a new page
+- **True page preview:** the preview shows the actual A4 pages, labelled "Page X of N", so you can see exactly where each page splits before saving
+- **Save straight to PDF:** **Save PDF** opens a save dialog with the note's name already filled in. **Print** is still there if you want a paper copy
 - Ribbon button and a command: **Export active note to PDF**
 
 ## Installation
@@ -24,7 +25,7 @@ Desktop only.
 
 ## Usage
 
-Open a note and click the **file-down** ribbon icon, or run **PDF Exporter: Export active note to PDF** from the command palette. Check the preview, then print to PDF.
+Open a note and click the **file-down** ribbon icon, or run **PDF Exporter: Export active note to PDF** from the command palette. Check the pages in the preview, then click **Save PDF** (or **Print**).
 
 ## Development
 
