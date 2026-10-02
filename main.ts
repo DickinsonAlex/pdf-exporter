@@ -9,7 +9,7 @@ export default class PdfExportPlugin extends Plugin {
 	async onload() {
 		this.addRibbonIcon("file-down", "Export note as PDF", async () => {
 			await this.exportActiveNoteToPdf();
-		});
+		}).addClass("my-plugin-ribbon"); // grouped by the ribbon-groups snippet
 
 		this.addCommand({
 			id: "export-active-note-to-pdf",
@@ -52,7 +52,7 @@ export default class PdfExportPlugin extends Plugin {
 			this.groupForPrint(renderContainer);
 
 			const html = this.buildPrintHtml(renderContainer.innerHTML, file.basename);
-			new ResumePreviewModal(this.app, html).open();
+			new ResumePreviewModal(this.app, html, file.basename).open();
 
 			new Notice("Opened PDF preview.");
 		} catch (error) {
@@ -72,6 +72,7 @@ export default class PdfExportPlugin extends Plugin {
 	<title>${this.escapeHtml(title)}</title>
 	<style>
 		${pluginStyles}
+		${this.getSheetStyles()}
 	</style>
 </head>
 <body>
@@ -82,6 +83,43 @@ export default class PdfExportPlugin extends Plugin {
 	</div>
 </body>
 </html>`;
+	}
+
+	/**
+	 * Real A4 sheets. The paginate script moves the content onto fixed-size pages,
+	 * so the preview shows exactly where each page ends, and printing uses the
+	 * same sheets (one sheet = one printed page), so the PDF matches the preview.
+	 */
+	getSheetStyles(): string {
+		return `
+			@page { size: A4; margin: 0; }
+			html, body { margin: 0; padding: 0; }
+			.sheet {
+				width: 210mm;
+				height: 297mm;
+				padding: 14mm;
+				box-sizing: border-box;
+				overflow: hidden;
+				background: white;
+				position: relative;
+			}
+			.sheet .resume-body { padding: 0; }
+			@media screen {
+				html, body { background: #d6d6d6; }
+				body { padding: 16px 0 24px; }
+				.sheet { margin: 0 auto 18px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25); }
+				.sheet-label {
+					width: 210mm; margin: 0 auto 6px;
+					font: 600 10pt Arial, Helvetica, sans-serif; color: #444;
+				}
+			}
+			@media print {
+				body { background: white; }
+				.sheet-label { display: none; }
+				.sheet { break-after: page; page-break-after: always; }
+				.sheet:last-of-type { break-after: auto; page-break-after: auto; }
+			}
+		`;
 	}
 
 	prepareMarkdownForPdf(markdown: string): string {
@@ -677,13 +715,89 @@ export default class PdfExportPlugin extends Plugin {
 	}
 }
 
+/**
+ * Lays the preview document out onto real A4 sheets. Called by the preview modal on the
+ * iframe's document (from Obsidian's side, so no script runs inside the preview).
+ * Units are the print groups made by groupForPrint (header, h2 + first entry, entries).
+ * A unit that doesn't fit on the current sheet starts a new one, a unit taller than a
+ * whole page is split into its children, and <break> markers force a new sheet.
+ * Printing uses the same sheets, so the PDF matches the preview page for page.
+ */
+function paginateDocument(doc: Document): number {
+	const page = doc.querySelector(".page");
+	const body = page?.querySelector(".resume-body") as HTMLElement | null;
+	if (!page || !body || doc.querySelector(".sheet")) return doc.querySelectorAll(".sheet").length;
+
+	const probe = doc.createElement("div");
+	probe.style.cssText = "position:absolute;visibility:hidden;height:269mm;width:182mm";
+	doc.body.appendChild(probe);
+	const maxHeight = probe.getBoundingClientRect().height;
+	const width = probe.getBoundingClientRect().width;
+	probe.remove();
+
+	const units: Element[] = [];
+	for (const el of Array.from(body.children)) {
+		if (el.matches("section.resume-section")) units.push(...Array.from(el.children));
+		else units.push(el);
+	}
+
+	const sheets: HTMLElement[] = [];
+	let current: HTMLElement | null = null;
+	const newSheet = (): HTMLElement => {
+		const sheet = doc.createElement("div");
+		sheet.className = "sheet";
+		const inner = doc.createElement("div");
+		inner.className = body.className;
+		inner.style.width = `${width}px`;
+		sheet.appendChild(inner);
+		doc.body.appendChild(sheet);
+		sheets.push(sheet);
+		current = inner;
+		return inner;
+	};
+	const fits = (box: HTMLElement) => box.scrollHeight <= maxHeight + 0.5;
+	const place = (unit: Element): void => {
+		if (unit.matches(".pdf-page-break")) {
+			if (current && current.children.length) newSheet();
+			return;
+		}
+		let box = current ?? newSheet();
+		box.appendChild(unit);
+		if (fits(box)) return;
+		unit.remove();
+		if (box.children.length) {
+			box = newSheet();
+			box.appendChild(unit);
+			if (fits(box)) return;
+			unit.remove();
+		}
+		const kids = Array.from(unit.children);
+		if (kids.length > 1) kids.forEach(place);
+		else box.appendChild(unit); // a single block taller than a page: let it run over
+	};
+
+	units.forEach(place);
+	page.remove();
+
+	sheets.forEach((sheet, i) => {
+		const label = doc.createElement("div");
+		label.className = "sheet-label";
+		label.textContent = `Page ${i + 1} of ${sheets.length}`;
+		sheet.before(label);
+	});
+	return sheets.length;
+}
+
 class ResumePreviewModal extends Modal {
 	private readonly previewHtml: string;
 	private previewFrame: HTMLIFrameElement | null = null;
 
-	constructor(app: Plugin["app"], previewHtml: string) {
+	private readonly fileName: string;
+
+	constructor(app: Plugin["app"], previewHtml: string, fileName: string) {
 		super(app);
 		this.previewHtml = previewHtml;
+		this.fileName = fileName;
 	}
 
 	onOpen(): void {
@@ -713,7 +827,17 @@ class ResumePreviewModal extends Modal {
 				part: "preview-frame"
 			}
 		});
-		this.previewFrame.srcdoc = this.previewHtml;
+		const frame = this.previewFrame;
+		frame.addEventListener("load", async () => {
+			const doc = frame.contentDocument;
+			if (!doc) return;
+			await Promise.all(Array.from(doc.images).map((img) =>
+				img.complete ? null : new Promise((resolve) => { img.onload = img.onerror = resolve; })));
+			await doc.fonts?.ready;
+			const pages = paginateDocument(doc);
+			this.titleEl.setText(`PDF Preview (${pages} page${pages === 1 ? "" : "s"})`);
+		}, { once: true });
+		frame.srcdoc = this.previewHtml;
 		window.setTimeout(() => this.resizePreviewFrame(), 0);
 	}
 
@@ -746,7 +870,14 @@ class ResumePreviewModal extends Modal {
 			return;
 		}
 
+		// The save dialog suggests the top window's title as the file name, so show the
+		// note's name there while printing, then put Obsidian's title back.
+		const previousTitle = document.title;
+		const restore = () => { document.title = previousTitle; };
+		document.title = this.fileName;
+		this.previewFrame.contentWindow.addEventListener("afterprint", restore, { once: true });
 		this.previewFrame.contentWindow.focus();
 		this.previewFrame.contentWindow.print();
+		window.setTimeout(restore, 1000);
 	}
 }
